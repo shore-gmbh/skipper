@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
 	log "github.com/sirupsen/logrus"
 	"github.com/zalando/skipper/circuit"
 	"github.com/zalando/skipper/dataclients/kubernetes"
@@ -976,7 +977,7 @@ func Run(o Options) error {
 
 	o.PluginDirs = append(o.PluginDirs, o.PluginDir)
 	if len(o.OpenTracing) > 0 {
-		tracer, err := tracing.InitTracer(o.OpenTracing)
+		tracer, err := initTracer(o.PluginDirs, o.OpenTracing)
 		if err != nil {
 			return err
 		}
@@ -1000,4 +1001,16 @@ func Run(o Options) error {
 	<-routing.FirstLoad()
 
 	return listenAndServe(proxy, &o)
+}
+
+func initTracer(PluginDirs []string, tracingOpts []string) (opentracing.Tracer, error) {
+	tracerName := tracingOpts[0]
+	log.Infof("Trying to initialize tracer: %s", tracerName)
+
+	tracer, err := tracing.LoadTracingPlugin(PluginDirs, tracingOpts)
+	if err != nil {
+		tracer, err = tracing.InitTracer(tracingOpts)
+	}
+
+	return tracer, err
 }
