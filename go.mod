@@ -1,4 +1,4 @@
-module github.com/zalando/skipper
+module github.com/shore-gmbh/skipper
 
 require (
 	cloud.google.com/go v0.28.0 // indirect
