@@ -1253,6 +1253,7 @@ func run(o Options, sig chan os.Signal, idleConnsCH chan struct{}) error {
 
 	o.PluginDirs = append(o.PluginDirs, o.PluginDir)
 
+	// load tracing plugin
 	var tracer ot.Tracer
 	if len(o.OpenTracing) > 0 {
 		tracer, err = tracing.InitTracer(o.OpenTracing)
