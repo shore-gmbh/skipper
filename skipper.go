@@ -1255,7 +1255,7 @@ func run(o Options, sig chan os.Signal, idleConnsCH chan struct{}) error {
 
 	var tracer ot.Tracer
 	if len(o.OpenTracing) > 0 {
-		tracer, err = tracing.InitTracer(o.OpenTracing)
+		tracer, err = initTracer(o.PluginDirs, o.OpenTracing)
 		if err != nil {
 			return err
 		}
@@ -1286,3 +1286,16 @@ func run(o Options, sig chan os.Signal, idleConnsCH chan struct{}) error {
 func Run(o Options) error {
 	return run(o, nil, nil)
 }
+
+func initTracer(PluginDirs []string, tracingOpts []string) (ot.Tracer, error) {
+	tracerName := tracingOpts[0]
+	log.Infof("Trying to initialize tracer: %s", tracerName)
+
+	tracer, err := tracing.LoadTracingPlugin(PluginDirs, tracingOpts)
+	if err != nil {
+		tracer, err = tracing.InitTracer(tracingOpts)
+	}
+
+	return tracer, err
+}
+
