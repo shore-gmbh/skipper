@@ -1217,10 +1217,18 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var span ot.Span
 	wireContext, err := p.tracing.tracer.Extract(ot.HTTPHeaders, ot.HTTPHeadersCarrier(r.Header))
-	if err == nil {
-		span = p.tracing.tracer.StartSpan(p.tracing.initialOperationName, ext.RPCServerOption(wireContext))
+
+	var resourceName string
+	if r.Method == "" && r.URL.Path == "" {
+		resourceName = p.tracing.initialOperationName
 	} else {
-		span = p.tracing.tracer.StartSpan(p.tracing.initialOperationName)
+		resourceName = fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+	}
+
+	if err == nil {
+		span = p.tracing.tracer.StartSpan(resourceName, ext.RPCServerOption(wireContext))
+	} else {
+		span = p.tracing.tracer.StartSpan(resourceName)
 		err = nil
 	}
 	defer func() {
