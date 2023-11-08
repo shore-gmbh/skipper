@@ -1218,6 +1218,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var span ot.Span
 	wireContext, err := p.tracing.tracer.Extract(ot.HTTPHeaders, ot.HTTPHeadersCarrier(r.Header))
 
+	var primaryOperation = "proxy.request"
 	var resourceName string
 	if r.Method == "" && r.URL.Path == "" {
 		resourceName = p.tracing.initialOperationName
@@ -1226,9 +1227,15 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err == nil {
-		span = p.tracing.tracer.StartSpan(resourceName, ext.RPCServerOption(wireContext))
+		span = p.tracing.tracer.
+						StartSpan(primaryOperation, ext.RPCServerOption(wireContext)).
+						SetTag("resource.name", resourceName).
+						SetTag("skipper.wire_context", true)
 	} else {
-		span = p.tracing.tracer.StartSpan(resourceName)
+		span = p.tracing.tracer.
+						StartSpan(primaryOperation).
+						SetTag("resource.name", resourceName).
+						SetTag("skipper.wire_context", false)
 		err = nil
 	}
 	defer func() {
