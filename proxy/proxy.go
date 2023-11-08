@@ -1218,19 +1218,13 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var span ot.Span
 	wireContext, err := p.tracing.tracer.Extract(ot.HTTPHeaders, ot.HTTPHeadersCarrier(r.Header))
 
-	var resourceName string
-	if r.Method == "" && r.URL.Path == "" {
-		resourceName = p.tracing.initialOperationName
-	} else {
-		resourceName = fmt.Sprintf("%s %s", r.Method, r.URL.Path)
-	}
-
 	if err == nil {
-		span = p.tracing.tracer.StartSpan(resourceName, ext.RPCServerOption(wireContext))
+		span = p.tracing.tracer.StartSpan(p.tracing.initialOperationName, ext.RPCServerOption(wireContext))
 	} else {
-		span = p.tracing.tracer.StartSpan(resourceName)
+		span = p.tracing.tracer.StartSpan(p.tracing.initialOperationName)
 		err = nil
 	}
+
 	defer func() {
 		if ctx != nil && ctx.proxySpan != nil {
 			ctx.proxySpan.Finish()
@@ -1274,6 +1268,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r = r.WithContext(ot.ContextWithSpan(r.Context(), span))
 
 	ctx = newContext(lw, r, p.flags.PreserveOriginal(), p.metrics, p.routing.Get())
+
 	ctx.startServe = time.Now()
 	ctx.tracer = p.tracing.tracer
 
@@ -1293,6 +1288,8 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			done()
 		}
 	}
+
+	span = p.tracing.tracer.StartSpan(ctx.route.Id, ext.RPCServerOption(wireContext))
 
 	if err != nil {
 		p.tracing.setTag(span, ErrorTag, true)
